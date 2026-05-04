@@ -15,6 +15,7 @@ food_database = [
     {"name": "Mac and Cheese",    "tags": ["warm", "comforting", "cheesy", "rich", "hearty"], "emoji": "🧀"},
 ]
 
+# Maps vague craving words to related food tags.
 CRAVING_SYNONYMS = {
     "crunchy":    ["crispy", "crunchy"],
     "crispy":     ["crispy", "crunchy"],
@@ -33,6 +34,33 @@ CRAVING_SYNONYMS = {
     "fruity":     ["fruity", "sweet", "fresh"],
 }
 
+# Tag weights — higher means more distinctive/important.
+# Tags not listed fall back to DEFAULT_WEIGHT.
+TAG_WEIGHTS = {
+    # Highly distinctive — strong signal
+    "crispy":     3.0,
+    "cheesy":     3.0,
+    "fruity":     3.0,
+    "sticky":     3.0,
+    "dessert":    3.0,
+    "greasy":     2.5,
+    # Moderately distinctive
+    "sweet":      2.0,
+    "rich":       2.0,
+    "crunchy":    2.0,
+    "comforting": 2.0,
+    "hearty":     2.0,
+    # Common / generic — weaker signal
+    "savory":     1.5,
+    "salty":      1.5,
+    "warm":       1.0,
+    "soft":       1.0,
+    "light":      1.0,
+    "fresh":      1.0,
+}
+
+DEFAULT_WEIGHT = 1.0
+
 # ── Logic ─────────────────────────────────────────────────────────────────────
 
 def parse_craving(craving_input):
@@ -50,12 +78,21 @@ def expand_keywords(keywords):
     return expanded
 
 def score_food(food, keywords):
+    """
+    Score using weighted tag matching.
+    matched_weight / total_possible_weight
+    """
     food_tags = set(food["tags"])
     expanded  = expand_keywords(keywords)
-    matched   = food_tags & expanded
+
     if not expanded:
         return 0.0, set()
-    return len(matched) / len(expanded), matched
+
+    matched        = food_tags & expanded
+    matched_weight = sum(TAG_WEIGHTS.get(t, DEFAULT_WEIGHT) for t in matched)
+    total_weight   = sum(TAG_WEIGHTS.get(t, DEFAULT_WEIGHT) for t in expanded)
+
+    return matched_weight / total_weight, matched
 
 def rank_foods(craving_input):
     keywords = parse_craving(craving_input)
